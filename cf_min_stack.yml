@@ -1,0 +1,308 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description:
+  Static web site stack that includes:
+  * CodeCommit Git repository
+  * S3 bucket for web site content
+  * 
+  Does not include:
+  * Creation of Domain
+  * Hosted zone
+  * CloudFront
+  * 
+
+Parameters:
+  
+  #Domain name used for your static site
+  DomainName: 
+    Type: String
+    MinLength: 4
+    MaxLength: 253
+    Default: "blog.fxaugury.com"
+    AllowedPattern: "[a-z0-9]+[-.a-z0-9]*(\\.[a-z][a-z]+)+"
+
+  #SNS notification, AllowedPattern is RF5322 standard regex
+  NotificationEmail:
+    Type: String
+    Description: "Initial email address to receive Git change notifications"
+    MinLength: 6
+    AllowedPattern: "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])"
+    ConstraintDescription: "Provide a valid email address"
+  
+  #CodeCommit repo
+  ExistingGitRepository:
+    Description: "Git repository name for CodeCommit repository. Leave empty to have it create the repo for you."
+    Type: String
+    Default: ""
+
+  #CodePipeline source code bucket
+  ExistingCodePipelineBucket:
+    Description: "Name of CodePipeline artifact bucket. Leave empty to have the Bucket created for you."
+    Type: String
+    Default: ""
+  
+  #Lambda parameters
+  GeneratorLambdaFunctionRuntime:
+    Type: String
+    Description: "Runtime language of Static Site Generator AWS Lambda function"
+    Default: "nodejs"
+    AllowedValues:
+      - "python2.7"
+      - "nodejs"
+      - "nodejs4.3"
+      - "java8"
+  
+  GeneratorLambdaFunctionHandler:
+    Type: String
+    Description: "Function Handler for AWS Lambda function"
+    Default: "index.handler"
+  
+  #S3 buckets
+  ExistingSiteBucket:
+    Description: "Name of  website bucket."
+    Type: String
+    Default: ""
+
+  LambdaFunctionS3Bucket:
+    Type: String
+    Description: "S3 bucket containing ZIP of AWS Lambda function"
+    Default: ""
+
+  LambdaFunctionS3Key:
+    Type: String
+    Description: "S3 key containing ZIP of AWS Lambda function"
+    Default: "lambda/aws-lambda-git-backed-static-website.zip"
+
+Conditions:
+  GitRepositoryRequired: !Equals [!Ref ExistingGitRepository, ""]
+  SiteBucketRequired: !Equals [!Ref ExistingSiteBucket, ""]
+  CodePipelineBucketRequired: !Equals [!Ref ExistingCodePipelineBucket, ""]
+
+Resources:
+  # Bucket for CodePipeline artifact storage: codepipeline.example.com
+  CodePipelineBucket:
+    Condition: CodePipelineBucketRequired
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub "src.${DomainName}"
+      VersioningConfiguration:
+        Status: Disabled
+    DeletionPolicy: Retain
+
+  # SNS topic for Git repository activity. Email subscription
+  NotificationTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      DisplayName: !Sub "Activity in ${DomainName} Git repository"
+      Subscription:
+        - Endpoint: !Ref NotificationEmail
+          Protocol: email
+
+  # IAM info for AWS Lambda functions
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: !Sub "${DomainName}-execution-policy"
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: "logs:*"
+                Resource: "arn:aws:logs:*:*:*"
+              - Effect: Allow
+                Action:
+                  - codepipeline:PutJobSuccessResult
+                  - codepipeline:PutJobFailureResult
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketLocation
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:AbortMultipartUpload
+                  - s3:DeleteObject
+                  - s3:GetObject
+                  - s3:GetObjectAcl
+                  - s3:ListMultipartUploadParts
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                Resource:
+                  - !Join ["", ["arn:aws:s3:::", !If [SiteBucketRequired, !Ref SiteBucket, !Ref ExistingSiteBucket], "/*"]]
+                  - !Join ["", ["arn:aws:s3:::", !If [CodePipelineBucketRequired, !Ref CodePipelineBucket, !Ref ExistingCodePipelineBucket], "/*"]]
+
+  GeneratorLambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: !Sub "Static site generator for ${DomainName}"
+      Role: !GetAtt LambdaExecutionRole.Arn
+      MemorySize: 1536
+      Timeout: 300
+      Runtime: !Ref GeneratorLambdaFunctionRuntime
+      Handler: !Ref GeneratorLambdaFunctionHandler
+      Code:
+        S3Bucket: !Ref GeneratorLambdaFunctionS3Bucket
+        S3Key: !Ref GeneratorLambdaFunctionS3Key
+
+  # IAM info for CodePipeline
+  CodePipelineRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+                - "codepipeline.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "codepipeline-service"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "*"
+                Resource: "*"
+
+  # CodePipeline: Pass Git contents to AWS Lambda function on Git activity and Generate to S3 Static site destination bucket
+  CodePipeline:
+    Type: "AWS::CodePipeline::Pipeline"
+    Properties:
+      Name: !Sub "${DomainName}-codepipeline"
+      ArtifactStore:
+        Type: S3
+        Location: !If [CodePipelineBucketRequired, !Ref CodePipelineBucket, !Ref ExistingCodePipelineBucket]
+      RestartExecutionOnUpdate: false
+      RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/${CodePipelineRole}"
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeCommit
+                Version: 1
+              Configuration:
+                RepositoryName: !If [GitRepositoryRequired, !Ref DomainName, !Ref ExistingGitRepository]
+                BranchName: master
+              OutputArtifacts:
+                - Name: SiteSource
+              RunOrder: 1
+        - Name: InvokeGenerator
+          Actions:
+            - Name: InvokeAction
+              InputArtifacts:
+                - Name: SiteSource
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Provider: Lambda
+                Version: 1
+              Configuration:
+                FunctionName: !Ref GeneratorLambdaFunction
+                UserParameters: !Ref GeneratorLambdaFunctionUserParameters
+              OutputArtifacts:
+                - Name: SiteContent
+              RunOrder: 1
+
+Mappings:
+  RegionMap:
+    ap-northeast-1:
+      S3hostedzoneID: "Z2M4EHUR26P7ZW"
+      websiteendpoint: "s3-website-ap-northeast-1.amazonaws.com"
+    ap-northeast-2:
+      S3hostedzoneID: "Z3W03O7B5YMIYP"
+      websiteendpoint: "s3-website.ap-northeast-2.amazonaws.com"
+    ap-south-1:
+      S3hostedzoneID: "Z11RGJOFQNVJUP"
+      websiteendpoint: "s3-website.ap-south-1.amazonaws.com"
+    ap-southeast-1:
+      S3hostedzoneID: "Z3O0J2DXBE1FTB"
+      websiteendpoint: "s3-website-ap-southeast-1.amazonaws.com"
+    ap-southeast-2:
+      S3hostedzoneID: "Z1WCIGYICN2BYD"
+      websiteendpoint: "s3-website-ap-southeast-2.amazonaws.com"
+    eu-central-1:
+      S3hostedzoneID: "Z21DNDUVLTQW6Q"
+      websiteendpoint: "s3-website.eu-central-1.amazonaws.com"
+    eu-west-1:
+      S3hostedzoneID: "Z1BKCTXD74EZPE"
+      websiteendpoint: "s3-website-eu-west-1.amazonaws.com"
+    sa-east-1:
+      S3hostedzoneID: "Z7KQH4QJS55SO"
+      websiteendpoint: "s3-website-sa-east-1.amazonaws.com"
+    us-east-1:
+      S3hostedzoneID: "Z3AQBSTGFYJSTF"
+      websiteendpoint: "s3-website-us-east-1.amazonaws.com"
+    us-east-2:
+      S3hostedzoneID: "Z2O1EMRO9K5GLX"
+      websiteendpoint: "s3-website.us-east-2.amazonaws.com"
+    us-west-1:
+      S3hostedzoneID: "Z2F56UZL2M1ACD"
+      websiteendpoint: "s3-website-us-west-1.amazonaws.com"
+    us-west-2:
+      S3hostedzoneID: "Z3BJ6K6RIION7M"
+      websiteendpoint: "s3-website-us-west-2.amazonaws.com"
+
+Outputs:
+  SiteBucket:
+    Value: !If [SiteBucketRequired, !Ref SiteBucket, !Ref ExistingSiteBucket]
+  CodePipelineArn:
+    Description: CodePipeline ARN
+    Value: !Ref CodePipeline
+  GitRepositoryName:
+    Description: Git repository name
+    Value: !If [GitRepositoryRequired, !Ref DomainName, !Ref ExistingGitRepository]
+  GitCloneUrlHttp:
+    Description: Git https clone endpoint
+    Value: !If [GitRepositoryRequired, !GetAtt GitRepository.CloneUrlHttp, "N/A"]
+  GitCloneUrlSsh:
+    Description: Git ssh clone endpoint
+    Value: !If [GitRepositoryRequired, !GetAtt GitRepository.CloneUrlSsh, "N/A"]
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Website and Git repository
+        Parameters:
+          - DomainName
+      - Label:
+          default: Git activity notifications
+        Parameters:
+          - NotificationEmail
+      - Label:
+          default: AWS Lambda Static site generation function
+        Parameters:
+          - GeneratorLambdaFunctionS3Bucket
+          - GeneratorLambdaFunctionS3Key
+          - GeneratorLambdaFunctionRuntime
+          - GeneratorLambdaFunctionHandler
+          - GeneratorLambdaFunctionUserParameters
+      - Label:
+          default: AWS Lambda Function (Sync to S3)
+        Parameters:
+          - SyncLambdaFunctionS3Bucket
+          - SyncLambdaFunctionS3Key
+      - Label:
+          default: Existing Resources to use, if empty they will be created for you.
+        Parameters:
+          - ExistingGitRepository
+          - ExistingSiteBucket
+          - ExistingCodePipelineBucket
