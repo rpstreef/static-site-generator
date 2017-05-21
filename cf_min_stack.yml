@@ -13,7 +13,7 @@ Parameters:
     Default: "blog.fxaugury.com"
     AllowedPattern: "[a-z0-9]+[-.a-z0-9]*(\\.[a-z][a-z]+)+"
 
-  #SNS notification, AllowedPattern is RF5322 standard regex
+  #SNS notification
   NotificationEmail:
     Type: String
     Description: "Initial email address to receive Git change notifications"
