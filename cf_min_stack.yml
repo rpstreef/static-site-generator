@@ -118,18 +118,22 @@ Resources:
                   - !Join ["", ["arn:aws:s3:::", !Ref ExistingSiteBucket, "/*"]]
                   - !Join ["", ["arn:aws:s3:::", !Ref ExistingCodePipelineBucket, "/*"]]
 
+  # Lambda function, pass environment param for target bucket
   GeneratorLambdaFunction:
     Type: "AWS::Lambda::Function"
     Properties:
       Description: !Sub "Static site generator for ${DomainName}"
       Role: !GetAtt LambdaExecutionRole.Arn
-      MemorySize: 1536
+      MemorySize: 512
       Timeout: 300
       Runtime: !Ref GeneratorLambdaFunctionRuntime
       Handler: !Ref GeneratorLambdaFunctionHandler
       Code:
         S3Bucket: !Ref GeneratorLambdaFunctionS3Bucket
         S3Key: !Ref GeneratorLambdaFunctionS3Key
+      Environment:
+        Variables:
+          SiteBucket: !Ref ExistingSiteBucket
 
   # IAM info for CodePipeline
   CodePipelineRole:
