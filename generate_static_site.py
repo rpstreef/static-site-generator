@@ -21,6 +21,7 @@ def setup(event):
     input_artifact = job_data['inputArtifacts'][0]
     from_bucket = input_artifact['location']['s3Location']['bucketName']
     from_key = input_artifact['location']['s3Location']['objectKey']
+    # environment variable passed along by CloudFormation template
     to_bucket = os.environ['SiteBucket']
 
     return (job_id, from_bucket, from_key, to_bucket)
