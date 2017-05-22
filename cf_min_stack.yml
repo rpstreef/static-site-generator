@@ -29,7 +29,7 @@ Parameters:
 
   #CodePipeline source code bucket
   ExistingCodePipelineBucket:
-    Description: "Name of CodePipeline artifact bucket. Leave empty to have the Bucket created for you."
+    Description: "Name of CodePipeline artifact bucket."
     Type: String
     Default: ""
   
@@ -39,9 +39,8 @@ Parameters:
     Description: "Runtime language of Static Site Generator AWS Lambda function"
     Default: "nodejs"
     AllowedValues:
-      - "python2.7"
+      - "python3.6"
       - "nodejs"
-      - "nodejs4.3"
       - "java8"
   
   GeneratorLambdaFunctionHandler:
@@ -63,21 +62,9 @@ Parameters:
   GeneratorLambdaFunctionS3Key:
     Type: String
     Description: "S3 key containing ZIP of AWS Lambda function"
-    Default: "lambda/aws-lambda-git-backed-static-website.zip"
-
-Conditions:
-  CodePipelineBucketRequired: !Equals [!Ref ExistingCodePipelineBucket, ""]
+    Default: "generate_static_site.zip"
 
 Resources:
-  # Bucket for CodePipeline artifact storage: codepipeline.example.com
-  CodePipelineBucket:
-    Condition: CodePipelineBucketRequired
-    Type: "AWS::S3::Bucket"
-    Properties:
-      BucketName: !Sub "src.${DomainName}"
-      VersioningConfiguration:
-        Status: Disabled
-    DeletionPolicy: Retain
 
   # SNS topic for Git repository activity. Email subscription
   NotificationTopic:
@@ -129,7 +116,7 @@ Resources:
                   - s3:PutObjectAcl
                 Resource:
                   - !Join ["", ["arn:aws:s3:::", !Ref ExistingSiteBucket, "/*"]]
-                  - !Join ["", ["arn:aws:s3:::", !If [CodePipelineBucketRequired, !Ref CodePipelineBucket, !Ref ExistingCodePipelineBucket], "/*"]]
+                  - !Join ["", ["arn:aws:s3:::", !Ref ExistingCodePipelineBucket, "/*"]]
 
   GeneratorLambdaFunction:
     Type: "AWS::Lambda::Function"
@@ -175,7 +162,7 @@ Resources:
       Name: !Sub "${DomainName}-codepipeline"
       ArtifactStore:
         Type: S3
-        Location: !If [CodePipelineBucketRequired, !Ref CodePipelineBucket, !Ref ExistingCodePipelineBucket]
+        Location: !Ref ExistingCodePipelineBucket
       RestartExecutionOnUpdate: false
       RoleArn: !Sub "arn:aws:iam::${AWS::AccountId}:role/${CodePipelineRole}"
       Stages:
@@ -218,13 +205,14 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: Website and Git repository
+          default: Website domain
         Parameters:
           - DomainName
       - Label:
-          default: Git activity notifications
+          default: CodeCommit
         Parameters:
           - NotificationEmail
+          - ExistingGitRepository
       - Label:
           default: AWS Lambda Static site generation function
         Parameters:
@@ -233,13 +221,7 @@ Metadata:
           - GeneratorLambdaFunctionRuntime
           - GeneratorLambdaFunctionHandler
       - Label:
-          default: AWS Lambda Function (Sync to S3)
+          default: S3 site and code buckets
         Parameters:
-          - SyncLambdaFunctionS3Bucket
-          - SyncLambdaFunctionS3Key
-      - Label:
-          default: Existing Resources to use, if empty they will be created for you.
-        Parameters:
-          - ExistingGitRepository
           - ExistingSiteBucket
           - ExistingCodePipelineBucket
