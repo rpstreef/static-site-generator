@@ -5,7 +5,6 @@ from __future__ import print_function
 import zipfile
 import tempfile
 import shutil
-import shlex
 import subprocess
 import traceback
 import boto3
@@ -19,15 +18,12 @@ def setup(event):
     job_data = event['CodePipeline.job']['data']
     input_artifact = job_data['inputArtifacts'][0]
     output_artifact = job_data['outputArtifacts'][0]
-    config = job_data['actionConfiguration']['configuration']
     from_bucket = input_artifact['location']['s3Location']['bucketName']
     from_key = input_artifact['location']['s3Location']['objectKey']
     to_bucket = output_artifact['location']['s3Location']['bucketName']
     to_key = output_artifact['location']['s3Location']['objectKey']
-    user_parameters = config['UserParameters']
 
-    return (job_id, from_bucket, from_key,
-            to_bucket, to_key, user_parameters)
+    return (job_id, from_bucket, from_key, to_bucket, to_key)
 
 def download_source(from_bucket, from_key, source_dir):
     """ Download source code to be generated """
@@ -42,11 +38,10 @@ def upload_site(site_dir, to_bucket, to_key):
         site_zip_file = shutil.make_archive(tmp_file.name, 'zip', site_dir)
         S3.upload_file(site_zip_file, to_bucket, to_key)
 
-def generate_static_site(source_dir, site_dir, user_parameters):
+def generate_static_site(source_dir, site_dir):
     """Generate static site using hugo."""
     command = ["./hugo", "--source=" + source_dir, "--destination=" + site_dir]
-    if user_parameters.startswith("-"):
-        command.extend(shlex.split(user_parameters))
+
     print(command)
     try:
         print(subprocess.check_output(command, stderr=subprocess.STDOUT))
@@ -58,12 +53,12 @@ def generate_static_site(source_dir, site_dir, user_parameters):
 def handler(event, context):
     """ Program event flow"""
     try:
-        (job_id, from_bucket, from_key, to_bucket, to_key, user_parameters) = setup(event)
+        (job_id, from_bucket, from_key, to_bucket, to_key) = setup(event)
         source_dir = tempfile.mkdtemp()
         site_dir = tempfile.mkdtemp()
 
         download_source(from_bucket, from_key, source_dir)
-        generate_static_site(source_dir, site_dir, user_parameters)
+        generate_static_site(source_dir, site_dir)
         upload_site(site_dir, to_bucket, to_key)
         CP.put_job_success_result(jobId=job_id)
 
