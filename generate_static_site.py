@@ -4,12 +4,18 @@
 from __future__ import print_function
 import os
 import zipfile
+import gzip
 import tempfile
 import shutil
 import subprocess
 import traceback
+from mimetypes import MimeTypes
+from multiprocessing.pool import ThreadPool
 import boto3
 from botocore.client import Config
+from botocore.exceptions import ClientError
+
+DONOTZIP = ['.jpg', '.png', '.ttf', '.woff', '.woff2', '.gif']
 
 CP = boto3.client('codepipeline')
 S3 = boto3.client('s3', config=Config(signature_version='s3v4'))
@@ -34,11 +40,15 @@ def download_source(from_bucket, from_key, source_dir):
             zipobj.extractall(source_dir)
 
 def upload_site(site_dir, to_bucket):
-    """ Upload generated code to S3 site bucket, clean existing data on copy """
-    command = ["./aws", "s3", "sync", "--acl", "public-read", "--delete",
-               site_dir + "/", "s3://" + to_bucket + "/"]
-    print(command)
-    print(subprocess.check_output(command, stderr=subprocess.STDOUT))
+    """
+    Upload generated code to S3 site bucket, clean existing data on copy
+    Create gzip from all files, except images, then copy to site bucket
+    """
+    staging_dir = '/tmp/staging/'
+   
+    [zip_file(x, staging_dir + x) if is_zip_file(x) else copy_file(x, staging_dir + x) for x in get_files(site_dir)]
+    pool = ThreadPool(processes=5)
+    pool.map(lambda x: upload_file(to_bucket, x, staging_dir, site_dir), get_files(staging_dir))
 
 def generate_static_site(source_dir, site_dir):
     """Generate static site using hugo."""
@@ -51,6 +61,61 @@ def generate_static_site(source_dir, site_dir):
         print("ERROR return code: ", error.returncode)
         print("ERROR output: ", error.output)
         raise
+
+def get_files(base_folder):
+    """ doc string """
+    file_paths = []
+    # os.walk will yield 3 parameter tuple
+    for root, directory, files in os.walk(base_folder):
+        for filename in files:
+            filepath = os.path.join(root, filename)
+            file_paths.append(filepath)
+    return file_paths
+
+def zip_file(input, output):
+    """ doc string """
+    print('Zipping ' + input)
+    dirname = os.path.dirname(output)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    with open(input, 'rb') as f_in, gzip.open(output, 'wb') as f_out:
+        f_out.writelines(f_in)
+
+def copy_file(input, output):
+    """ doc string """
+    print('Copying ' + input)
+    dirname = os.path.dirname(output)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    shutil.copyfile(input, output)
+
+def is_zip_file(file_name):
+    """ doc string """
+    extension = os.path.splitext(file_name)[1]
+    if extension in DONOTZIP:
+        return False
+    return True
+
+def upload_file(bucket_name, file_path, staging_dir, site_dir):
+    """ doc string """
+    destname = file_path.replace(staging_dir, "/")
+    destname = destname.replace(site_dir + "/", "")
+
+    print("Uploading file " + file_path + ' to ' + destname)
+    try:
+        data = open(file_path, 'rb')
+        ftype, encoding = MimeTypes().guess_type(file_path)
+        con_type = ftype if ftype is not None else encoding if encoding is not None else 'text/plain'
+        enc_type = 'gzip' if is_zip_file(file_path) else ''
+        S3.put_object(Bucket=bucket_name, Key=destname, Body=data,
+                      ContentEncoding=enc_type, ContentType=con_type, ACL='public-read')
+    except ClientError as err:
+        print("Failed to upload artefact to S3.\n" + str(err))
+        return False
+    except IOError as err:
+        print("Failed to access artefact in this directory.\n" + str(err))
+        return False
+    return True
 
 def handler(event, context):
     """ Program event flow"""

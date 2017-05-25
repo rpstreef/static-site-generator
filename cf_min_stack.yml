@@ -124,7 +124,7 @@ Resources:
     Properties:
       Description: !Sub "Static site generator for ${DomainName}"
       Role: !GetAtt LambdaExecutionRole.Arn
-      MemorySize: 512
+      MemorySize: 256
       Timeout: 300
       Runtime: !Ref GeneratorLambdaFunctionRuntime
       Handler: !Ref GeneratorLambdaFunctionHandler
