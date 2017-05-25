@@ -45,7 +45,7 @@ def upload_site(site_dir, to_bucket):
     Create gzip from all files, except images, then copy to site bucket
     """
     staging_dir = '/tmp/staging/'
-   
+
     [zip_file(x, staging_dir + x) if is_zip_file(x) else copy_file(x, staging_dir + x) for x in get_files(site_dir)]
     pool = ThreadPool(processes=5)
     pool.map(lambda x: upload_file(to_bucket, x, staging_dir, site_dir), get_files(staging_dir))
@@ -63,7 +63,7 @@ def generate_static_site(source_dir, site_dir):
         raise
 
 def get_files(base_folder):
-    """ doc string """
+    """ Returns an array containing all the filepaths """
     file_paths = []
     # os.walk will yield 3 parameter tuple
     for root, directory, files in os.walk(base_folder):
@@ -73,7 +73,7 @@ def get_files(base_folder):
     return file_paths
 
 def zip_file(input, output):
-    """ doc string """
+    """ GZip's file """
     print('Zipping ' + input)
     dirname = os.path.dirname(output)
     if not os.path.exists(dirname):
@@ -82,7 +82,7 @@ def zip_file(input, output):
         f_out.writelines(f_in)
 
 def copy_file(input, output):
-    """ doc string """
+    """ Copy to staging directory before we copy to the dest bucket """
     print('Copying ' + input)
     dirname = os.path.dirname(output)
     if not os.path.exists(dirname):
@@ -97,7 +97,7 @@ def is_zip_file(file_name):
     return True
 
 def upload_file(bucket_name, file_path, staging_dir, site_dir):
-    """ doc string """
+    """ Upload file by file, before upload it will set the encoding for the file """
     destname = file_path.replace(staging_dir, "/")
     destname = destname.replace(site_dir + "/", "")
 
@@ -127,6 +127,7 @@ def handler(event, context):
         download_source(from_bucket, from_key, source_dir)
         generate_static_site(source_dir, site_dir)
         upload_site(site_dir, to_bucket)
+
         CP.put_job_success_result(jobId=job_id)
 
     except Exception as exception:
