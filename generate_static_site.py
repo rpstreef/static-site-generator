@@ -19,6 +19,7 @@ DONOTZIP = ['.jpg', '.png', '.ttf', '.woff', '.woff2', '.gif']
 
 CP = boto3.client('codepipeline')
 S3 = boto3.client('s3', config=Config(signature_version='s3v4'))
+DEV = False
 
 def setup(event):
     """ Setup all properties"""
@@ -74,7 +75,8 @@ def get_files(base_folder):
 
 def zip_file(input, output):
     """ GZip's file """
-    print('Zipping ' + input)
+    if DEV:
+        print('Zipping ' + input)
     dirname = os.path.dirname(output)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
@@ -83,7 +85,8 @@ def zip_file(input, output):
 
 def copy_file(input, output):
     """ Copy to staging directory before we copy to the dest bucket """
-    print('Copying ' + input)
+    if DEV:
+        print('Copying ' + input)
     dirname = os.path.dirname(output)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
@@ -101,7 +104,8 @@ def upload_file(bucket_name, file_path, staging_dir, site_dir):
     destname = file_path.replace(staging_dir, "/")
     destname = destname.replace(site_dir + "/", "")
 
-    print("Uploading file " + file_path + ' to ' + destname)
+    if DEV:
+        print("Uploading file " + file_path + ' to ' + destname)
     try:
         data = open(file_path, 'rb')
         ftype, encoding = MimeTypes().guess_type(file_path)
