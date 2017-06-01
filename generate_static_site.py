@@ -1,5 +1,10 @@
 #!/usr/bin/python3.6
-""" Generates static site from CodeCommit source and deploys to production S3 Bucket """
+"""
+Generates static site from CodeCommit source and deploys to production S3 Bucket
+Many thanks to MMusket and Alestic from which i adapted their code.
+https://github.com/mmusket/s3-hosting-guide
+https://github.com/alestic/aws-lambda-codepipeline-site-generator-hugo
+"""
 
 from __future__ import print_function
 import os
