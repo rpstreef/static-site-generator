@@ -1,23 +1,25 @@
-# Thanks goes out to MMusket and Alesco
+# Lean auto-deploy static site CloudFormation template
 
-Thanks a lot to the following two GitHub users, [MMusket](https://github.com/mmusket/) and [Alestic](https://github.com/alestic/), for providing solid code and materials.
+First off I'd like to thank the following two GitHub users, [MMusket](https://github.com/mmusket/) and [Alestic](https://github.com/alestic/), for providing solid code and materials.
 
-## Why i adapted their code?
+I've adapted, combined and rewritten parts of their code to suit my needs for a minimal stack on AWS and for learning purposes.
 
-Code you see here has been adapted, combined, and rewritten in order for me to better understand CloudFormation and automation with CodePipeline.
+## What is not automated?
 
-It's on purpose much more simple setup that what is featured on Alesco's github. It doesn't automate setup of; CloudFront CDN, some S3 bucket creation, SNS Notifications, and a CodeCommit repo.
+IIt's on purpose much more simple setup than what is featured on Alesco's github. It doesn't automate setup of;
 
-The goal is understanding how all of this works by providing a step by step [guide](http://blog.fxaugury.com/) so you can reproduce it yourself.
+- CloudFront CDN,
+- Route53 DNS,
+- S3 bucket creation for logs and CloudFront,
+- SNS Notifications, and a
+- CodeCommit repo.
 
-I hope this guide helps out in some way.
+I provide a guide on how to setup Route53 DNS, the CodeCommit repo and the minimal CloudFormation stack to help understand how it all fits together.
 
 ## To get started
 
 You can use the **cf_stack.yml** template to import in CloudFormation and subsequently run it to create AWS resources that will help automate your static site deployment to AWS hosted on S3.
 
 The python file, **generate_static_site.py**, will generate a static site from your hugo source code and then minify it using GZIP before deploying it to your S3 website bucket.
-
-## Written guide & tuturial
 
 Check out my written guide on [blog.FXAugury.com](http://blog.fxaugury.com/) to understand how it all works together.
