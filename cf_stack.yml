@@ -13,14 +13,6 @@ Parameters:
     Default: "blog.fxaugury.com"
     AllowedPattern: "[a-z0-9]+[-.a-z0-9]*(\\.[a-z][a-z]+)+"
 
-  #SNS notification
-  NotificationEmail:
-    Type: String
-    Description: "Initial email address to receive Git change notifications"
-    MinLength: 6
-    AllowedPattern: ".+@[a-z0-9]+[-.a-z0-9]*(\\.[a-z][a-z]+)+"
-    ConstraintDescription: "Provide a valid email address"
-  
   #CodeCommit repo
   ExistingGitRepository:
     Description: "Git repository name for CodeCommit repository."
@@ -29,7 +21,7 @@ Parameters:
 
   #CodePipeline source code bucket
   ExistingCodePipelineBucket:
-    Description: "Name of CodePipeline artifact bucket."
+    Description: "Name of CodePipeline artifact bucket. Leave empty and it will be created for you."
     Type: String
     Default: ""
   
@@ -64,18 +56,22 @@ Parameters:
     Description: "S3 key containing ZIP of AWS Lambda function"
     Default: "generate_static_site.zip"
 
+Conditions:
+  RequiresCodePipelineBucket: !Equals [!Ref ExistingCodePipelineBucket, ""]
+
 Resources:
-
-  # SNS topic for Git repository activity. Email subscription
-  NotificationTopic:
-    Type: "AWS::SNS::Topic"
+  #S3 temporary storage for CodeCommit source code, remove after 24 hours daily
+  CodePipelineBucket:
+    Condition: RequiresCodePipelineBucket
+    Type: "AWS::S3::Bucket"
     Properties:
-      DisplayName: !Sub "Activity in ${DomainName} Git repository"
-      Subscription:
-        - Endpoint: !Ref NotificationEmail
-          Protocol: email
-
-  # IAM info for AWS Lambda functions
+      BucketName: !Sub "src.${DomainName}"
+      LifecycleConfiguration:
+        Rules:
+          ExpirationInDays: 1
+    DeletionPolicy: Delete
+  
+  #Allow Lambda access to; List, upload, get, delete, put object or acl on S3 and Set job results on CodePipeline
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -118,7 +114,6 @@ Resources:
                   - !Join ["", ["arn:aws:s3:::", !Ref ExistingSiteBucket, "/*"]]
                   - !Join ["", ["arn:aws:s3:::", !Ref ExistingCodePipelineBucket, "/*"]]
 
-  # Lambda function, pass environment param for target bucket
   GeneratorLambdaFunction:
     Type: "AWS::Lambda::Function"
     Properties:
@@ -135,7 +130,7 @@ Resources:
         Variables:
           SiteBucket: !Ref ExistingSiteBucket
 
-  # IAM info for CodePipeline
+  # Allow all actions on Lambda and CodePipeline
   CodePipelineRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -158,8 +153,8 @@ Resources:
               - Effect: "Allow"
                 Action: "*"
                 Resource: "*"
-
-  # CodePipeline: Pass Git contents to AWS Lambda function on Git activity and Generate to S3 Static site destination bucket
+  
+  # Fetch code from Master branche, execute Lambda function to generate, compress and deploy static site.
   CodePipeline:
     Type: "AWS::CodePipeline::Pipeline"
     Properties:
@@ -204,6 +199,9 @@ Outputs:
   CodePipelineArn:
     Description: CodePipeline ARN
     Value: !Ref CodePipeline
+  CodePipelineS3Bucket:
+    Description: CodePipeline S3 Bucket
+    Value: !Ref ExistingCodePipelineBucket
 
 Metadata:
   AWS::CloudFormation::Interface:
