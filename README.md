@@ -4,6 +4,16 @@ _First off I'd like to thank the following two GitHub users, [MMusket](https://g
 
 I've adapted, combined and rewritten parts of their code to suit my needs for a minimal stack on AWS and for learning purposes. If you're just looking to get the full automated stack, check out [Alestic](https://github.com/alestic/)
 
+## To get started
+
+You can use the **cf_stack.yml** template to import in CloudFormation and subsequently run it to create AWS resources that will help automate your static site deployment to AWS hosted on S3.
+
+The python file, **generate_static_site.py**, will generate a static site from your hugo source code and then minify it using GZIP before deploying it to your S3 website bucket.
+
+You will need the hugo binary, see <https://github.com/spf13/hugo/releases> , zip the binary 'hugo' together with generate_static_site.py and upload this to an S3 bucket. Note the bucket and key (path in the bucket) to enter these parameters in the CloudFormation template.
+
+Check out my written guide on [blog.FXAugury.com](http://blog.fxaugury.com/) to understand how it all works together.
+
 ## Costs
 
 The following is a cost overview of running this static site on AWS:
@@ -30,16 +40,6 @@ Compare this to running your blog on **Wordpress** (no custom domain costs inclu
 | **Wordpress Free** (No custom domain)| No| $0.00|
 | **Wordpress Personal**| No| $2.99|
 | **Wordpress Premium**| Yes| $8.25|
-
-## To get started
-
-You can use the **cf_stack.yml** template to import in CloudFormation and subsequently run it to create AWS resources that will help automate your static site deployment to AWS hosted on S3.
-
-The python file, **generate_static_site.py**, will generate a static site from your hugo source code and then minify it using GZIP before deploying it to your S3 website bucket.
-
-You will need the hugo binary, see <https://github.com/spf13/hugo/releases> , zip the binary 'hugo' together with generate_static_site.py and upload this to an S3 bucket. Note the bucket and key (path in the bucket) to enter these parameters in the CloudFormation template.
-
-Check out my written guide on [blog.FXAugury.com](http://blog.fxaugury.com/) to understand how it all works together.
 
 ## Sources
 
