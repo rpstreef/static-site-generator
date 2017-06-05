@@ -6,13 +6,13 @@ I've adapted, combined and rewritten parts of their code to suit my needs for a 
 
 ## To get started
 
-You can use the **cf_stack.yml** template to import in CloudFormation and subsequently run it to create AWS resources that will help automate your static site deployment to AWS hosted on S3.
+Check out my written guide on [blog.FXAugury.com](http://blog.fxaugury.com/post/automated-static-site-with-codepipeline-using-cloudformation-on-aws/) to understand how it all works together.
 
-The python file, **generate_static_site.py**, will generate a static site from your hugo source code and then minify it using GZIP before deploying it to your S3 website bucket.
+You can use the **cf_stack.yml** to create an AWS CodePipeline process that will automate the generation and deployment of a Hugo static site.
+
+The python file, **generate_static_site.py**, will generate a static site from your Hugo source code and then minify it using GZIP before deploying it to your S3 website bucket.
 
 You will need the hugo binary, see <https://github.com/spf13/hugo/releases> , zip the binary 'hugo' together with generate_static_site.py and upload this to an S3 bucket. Note the bucket and key (path in the bucket) to enter these parameters in the CloudFormation template.
-
-Check out my written guide on [blog.FXAugury.com](http://blog.fxaugury.com/) to understand how it all works together.
 
 ## Costs
 
@@ -52,8 +52,8 @@ Free tier explained:
     - Every run takes about 5 seconds, divide 1.6 million seconds by 5 = 320,000 runs per month(!)
     - Free tier does not expire after 12 months!
 
-To check your current situation or calculate this example, go to the [AWS Calculator](https://calculator.s3.amazonaws.com/).
+To check your current AWS infrastructure cost situation or calculate this example, go to the [AWS Calculator](https://calculator.s3.amazonaws.com/).
 
 For an overview of Free tier participating services, see [Free tier](https://aws.amazon.com/free/) at Amazon.
 
-Please see [Wordpress](https://wordpress.com/pricing/) for the plan details.
+Please see the pricing section on [Wordpress](https://wordpress.com/pricing/) for more details.
