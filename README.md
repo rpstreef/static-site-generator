@@ -37,10 +37,11 @@ You can use the **cf_stack.yml** template to import in CloudFormation and subseq
 
 The python file, **generate_static_site.py**, will generate a static site from your hugo source code and then minify it using GZIP before deploying it to your S3 website bucket.
 
+You will need the hugo binary, see <https://github.com/spf13/hugo/releases> , zip the binary 'hugo' together with generate_static_site.py and upload this to an S3 bucket. Note the bucket and key (path in the bucket) to enter these parameters in the CloudFormation template.
+
 Check out my written guide on [blog.FXAugury.com](http://blog.fxaugury.com/) to understand how it all works together.
 
 ## Sources
-
 
 Free tier explained:
 - **[CodePipeline](https://aws.amazon.com/codepipeline/pricing/)**
