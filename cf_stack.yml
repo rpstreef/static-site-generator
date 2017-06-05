@@ -29,7 +29,7 @@ Parameters:
   GeneratorLambdaFunctionRuntime:
     Type: String
     Description: "Runtime language of Static Site Generator AWS Lambda function"
-    Default: "nodejs"
+    Default: "python3.6"
     AllowedValues:
       - "python3.6"
       - "nodejs"
@@ -38,7 +38,7 @@ Parameters:
   GeneratorLambdaFunctionHandler:
     Type: String
     Description: "Function Handler for AWS Lambda function"
-    Default: "index.handler"
+    Default: "generate_static_site.handler"
   
   #S3 buckets
   ExistingSiteBucket:
