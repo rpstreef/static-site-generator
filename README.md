@@ -14,7 +14,7 @@ The python file, **generate_static_site.py**, will generate a static site from y
 
 You will need the hugo binary, see <https://github.com/spf13/hugo/releases> , zip the binary 'hugo' together with generate_static_site.py and upload this to an S3 bucket. Note the bucket and key (path in the bucket) to enter these parameters in the CloudFormation template.
 
-## Costs
+## Monthly costs
 
 The following is a cost overview of running this static site on AWS:
 
