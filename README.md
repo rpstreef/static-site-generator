@@ -20,23 +20,23 @@ The following is a cost overview of running this static site on AWS:
 
 |   Service|  Item|   Cost|   Subtotal|
 |---|---|---|---|
-|   **S3**|   1 GB storage|    $0.03|   $0.03|
-|   |   10,0000 put/list requests|    $0.50|   $0.53|
-|   |   10,0000 Get and Other Requests |    $0.04|   $0.57|
-|   |   (Optional) depending on where you want to host your website and IF CodePipeline is available in that region. Inter region bucket transfers of 1GB/month|    $0.02|   $0.59|
-|   **Route53**|  Hosted zone |   $0.50|   $1.09|
-|   |  Standard queries: 1 million / month |   $0.40|   $1.49|
-|   **CodePipeLine**|  1 Free pipeline per month |   $0.00|   $1.49|
-|   **CodeCommit**|   First 5 users free with 50GB storage and 10,000 git requests/month|   $0.00|   $1.49|
-|   **Lambda**|   Memory: 256Mb you get 1,600,000 seconds of compute time for free|  $0.00|    $1.49|
-|   **Free tier**|  Discount|   -$0.05|   $1.44|
-|   |   |   |   **$1.44**|
+|   **S3**|   5 GB storage|    $0.12|   $0.12|
+|   |   5000 put/list requests|    $0.03|   $0.15|
+|   |   100,000 Get and Other Requests |    $0.04|   $0.19|
+|   |   Inter region bucket transfers of 1GB/month (depends on CodePipeline/Commit region availability) |    $0.02|   $0.21|
+|   **Route53**|  Hosted zone |   $0.50|   $0.71|
+|   |  Standard queries: 1 million / month |   $0.40|   $1.11|
+|   **CodePipeLine**|  1 Free pipeline per month |   $0.00|   $1.11|
+|   **CodeCommit**|   First 5 users free with 50GB storage and 10,000 git requests/month|   $0.00|   $1.11|
+|   **Lambda**|   Memory: 256Mb you get 1,600,000 seconds of compute time for free|  $0.00|    $1.11|
+|   **Free tier**|  Discount|   -$0.14|   $0.97|
+|   |   |   |   **$1.62**|
 
 Compare this to running your blog on **Wordpress** (no custom domain costs included):
 
 |   Service|  Monetize|   Cost|
 |---|---|---|
-| **Static site on AWS**| Yes| $1.49|
+| **Static site on AWS**| Yes| $1.11|
 | **Wordpress Free** (No custom domain)| No| $0.00|
 | **Wordpress Personal**| No| $2.99|
 | **Wordpress Premium**| Yes| $8.25|
