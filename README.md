@@ -30,7 +30,7 @@ The following is a cost overview of running this static site on AWS:
 |   **CodeCommit**|   First 5 users free with 50GB storage and 10,000 git requests/month|   $0.00|   $1.11|
 |   **Lambda**|   Memory: 256Mb you get 1,600,000 seconds of compute time for free|  $0.00|    $1.11|
 |   **Free tier**|  Discount|   -$0.14|   $0.97|
-|   |   |   |   **$1.62**|
+|   |   |   |   **$0.97**|
 
 Compare this to running your blog on **Wordpress** (no custom domain costs included):
 
