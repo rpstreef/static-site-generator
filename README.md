@@ -6,7 +6,7 @@ I've adapted, combined and rewritten parts of their code to suit my needs for a 
 
 ## To get started
 
-Check out my written guide on [blog.FXAugury.com](http://blog.fxaugury.com/post/automated-static-site-with-codepipeline-using-cloudformation-on-aws/) to understand how it all works together.
+Check out my written guide on [blog.FXAugury.com](http://blog.fxaugury.com/post/automated-static-site-with-aws-codepipeline-and-cloudformation/) to understand how it all works together.
 
 You can use the **cf_stack.yml** to create an AWS CodePipeline process that will automate the generation and deployment of a Hugo static site.
 
