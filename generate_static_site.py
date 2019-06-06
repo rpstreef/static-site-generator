@@ -8,6 +8,7 @@ https://github.com/alestic/aws-lambda-codepipeline-site-generator-hugo
 
 from __future__ import print_function
 import os
+import time
 import zipfile
 import gzip
 import tempfile
@@ -19,6 +20,11 @@ from multiprocessing.pool import ThreadPool
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
+
+LAMBDA_TASK_ROOT = os.environ.get('LAMBDA_TASK_ROOT', os.path.dirname(os.path.abspath(__file__)))
+CURR_BIN_DIR = os.path.join(LAMBDA_TASK_ROOT, 'bin')
+### In order to get permissions right, we have to copy them to /tmp
+BIN_DIR = '/tmp/bin'
 
 DONOTZIP = ['.jpg', '.png', '.ttf', '.woff', '.woff2', '.gif']
 
@@ -58,15 +64,31 @@ def upload_site(site_dir, to_bucket):
 
 def generate_static_site(source_dir, site_dir):
     """Generate static site using hugo."""
-    command = ["./hugo", "--source=" + source_dir, "--destination=" + site_dir]
+    _init_bin('hugo')
+
+    command = [os.path.join(BIN_DIR, 'hugo'), "--source=" + source_dir, "--destination=" + site_dir]
 
     print(command)
     try:
-        print(subprocess.check_output(command, stderr=subprocess.STDOUT))
+        print(subprocess.check_output(command, shell=False, stderr=subprocess.STDOUT))
     except subprocess.CalledProcessError as error:
         print("ERROR return code: ", error.returncode)
         print("ERROR output: ", error.output)
         raise
+
+def _init_bin(executable_name):
+    start = time.clock()
+    if not os.path.exists(BIN_DIR):
+        print("Creating bin folder")
+        os.makedirs(BIN_DIR)
+    print("Copying binaries for "+executable_name+" in /tmp/bin")
+    currfile = os.path.join(CURR_BIN_DIR, executable_name)
+    newfile  = os.path.join(BIN_DIR, executable_name)
+    shutil.copy2(currfile, newfile)
+    print("Giving new binaries permissions for lambda")
+    os.chmod(newfile, 0o775)
+    elapsed = (time.clock() - start)
+    print(executable_name+" ready in "+str(elapsed)+'s.')
 
 def get_files(base_folder):
     """ Returns an array containing all the filepaths """
